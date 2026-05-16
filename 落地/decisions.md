@@ -125,6 +125,20 @@
 
 ---
 
+## D-09b:MQTTS 由 nginx stream 终止(不走 Mosquitto 原生 TLS)
+
+| 项 | 论文 | 落地 |
+|---|---|---|
+| Broker TLS | Mosquitto 直接听 8883,自管 cert | **nginx `stream {}`** 听 8883,复用 `cocandy.com.cn` 的 Let's Encrypt,`proxy_pass` 到 `127.0.0.1:1883` |
+| Mosquitto 监听 | 0.0.0.0 | `127.0.0.1` 单接口,不对公网暴露 |
+| 证书续签 | 独立申请 | 复用 `cocandy.conf` 的 80 端口 acme-challenge,certbot 后挂 nginx 重载即可 |
+| 配置位置 | — | `Server/services/beacon/scripts/nginx.stream.conf`;由 `/etc/nginx/nginx.conf` 顶层 glob `include /opt/server/services/*/scripts/nginx.stream.conf;` |
+| 设备端 `BROKER_URI` | — | `mqtts://cocandy.com.cn:8883` |
+
+**理由**:证书管理集中在 nginx;Mosquitto 不需重启即可轮换证书;后续如加 mTLS 也只在 nginx 侧配置,Mosquitto 维持最简形态。
+
+---
+
 ## D-10:数据模型简化(配套 D-01~D-04)
 
 | 表 | 论文 | 落地 |

@@ -24,8 +24,8 @@
 | 名词 | 含义 | 唯一性 | 来源 |
 |---|---|---|---|
 | `device_id` | 物理设备身份,12 位小写 hex MAC | 全球唯一 | `esp_efuse_mac_get_default()` 运行时读取,**不烧录** |
-| `batch_uuid` | 批次许可证,服务器侧白名单的主键 | 1 个 UUID 对应 N 台同批设备 | NVS `provisioning` 命名空间烧录 |
-| `batch_secret` | 批次共享 HMAC 密钥 | 与 `batch_uuid` 1:1 | NVS `provisioning` 烧录,设备永不上行 |
+| `batch_uuid` | 批次许可证,服务器侧白名单的主键 | 1 个 UUID 对应 N 台同批设备 | **`config.h` 编译时常量** `BATCH_UUID`,与主固件一块烧 |
+| `batch_secret` | 批次共享 HMAC 密钥 | 与 `batch_uuid` 1:1 | **`config.h` 编译时常量** `BATCH_SECRET`,设备永不上行 |
 | `admin` | 控制台操作员账号 | 全局唯一 | 服务器 DB,与设备无关 |
 
 > `device_id` 示例:`a1b2c3d4e5f6`(MAC `A1:B2:C3:D4:E5:F6`,去冒号小写)。
@@ -57,16 +57,25 @@
 ```
 
 **撤销语义**:
-- `UPDATE batches SET revoked=1 WHERE batch_uuid=?` → 该批所有设备**下次重连被拒**;已建立的连接由 broker 主动 disconnect。
+- `UPDATE batches SET revoked=1 WHERE batch_uuid=?` → 该批所有设备**下次重连被拒**;当前实现不主动踢掉已连接会话,现有连接会保持到其自然断线或 broker/运维侧手动断开。
 - `UPDATE devices SET enabled=0 WHERE device_id=?` → 单台禁用,正交于批次撤销。
 
-### 1.3 烧录与配网(对应 TODO §9.1)
+### 1.3 烧录与 Wi-Fi 接入(对应 TODO §9.1)
 
-| 步骤 | 烧什么 | 怎么烧 |
-|---|---|---|
-| 出厂 | bootloader / partition / app / **NVS `provisioning`(batch_uuid + batch_secret)** | USB 工厂工具一次写 |
-| 现场配网(SoftAP) | NVS `wifi`(ssid + psk) | 设备开 AP `BeaconOps-{device_id 末 4}`,Captive Portal 表单输入 |
-| 现场切批(可选) | 覆盖 NVS `provisioning` | Captive Portal 高级页 |
+**设计原则**:企业场景下员工不可能知道内网 Wi-Fi 密码,设备出厂时一次烧入全部凭证,现场开机即用,无现场配网环节。
+
+| 项 | 内容 | 位置 | 怎么烧 |
+|---|---|---|---|
+| 主固件 | bootloader / partition / app | flash | `idf.py flash` |
+| 批次凭证 | `BATCH_UUID` + `BATCH_SECRET` | **`components/config/config.h`(编译时常量)** | 随主固件同烧;生产脚本可生成 `batch_credentials.h` 覆盖 `#define` |
+| Wi-Fi SSID 列表 | 一个或多个 (ssid, psk) | **`components/config/config.h` `WIFI_CRED_LIST`** | 随主固件同烧 |
+| Broker 地址 | `mqtts://cocandy.com.cn:8883` | **`components/config/config.h` `BROKER_URI`** | 随主固件同烧;CA 默认用 `certs.c` 内置的 ISRG Root X1(Let's Encrypt) |
+
+**传输层安全**:设备 ↔ `cocandy.com.cn:8883` 走 TLS 1.2/1.3;TLS 由服务器 nginx `stream` 块终止,代理到本机 `127.0.0.1:1883` 的 Mosquitto(不对公网暴露)。证书复用 `cocandy.com.cn` 的 Let's Encrypt,由 80 端口 acme-challenge 续签。配置位于 `Server/services/beacon/scripts/nginx.stream.conf`,由 `/etc/nginx/nginx.conf` 顶层 `include /opt/server/services/*/scripts/nginx.stream.conf;` 收入。
+
+**多 SSID 连接策略**:设备上电后主动扫描周边 AP,与 `WIFI_CRED_LIST` 交集的 SSID 中选信号最强者连接;连接失败/掉线后重扫重选。最后一次连上的 SSID 会写入 NVS `wifi/last_good_ssid`,下次启动优先尝试。
+
+**切批次**:重新编译固件(或产线重生成 `batch_credentials.h`)后重烧 app 分区即可,无需 NVS 操作。
 
 ---
 
