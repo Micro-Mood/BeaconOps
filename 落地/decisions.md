@@ -26,7 +26,7 @@
 
 | 项 | 论文 | 落地 |
 |---|---|---|
-| 收件人模型 | `users` 表(name/dept/role/device_uuid) | **不存在**;`dept` / `roles` 直接挂 `devices` |
+| 收件人模型 | `users` 表(name/dept/role/device_uuid) | **不存在**;`dept` 直接挂 `devices` |
 | LLM 工具 | `query_user(name/dept/role) → user_id`,`send_message(target_user_id)` | `query_device(...)`,`send_message(device_id)` |
 | 广播 scope | 通过 `users.dept / user_roles` 反查 device | 直接 `SELECT device_id FROM devices WHERE dept=?` |
 | 控制台页面 | "持有人 / 设备 / 消息中心" 三页并行 | "设备 / 消息中心 / 批次白名单" |
@@ -35,7 +35,7 @@
 **理由**:
 - 现状 users 表实际为空(远端确认),却被设为 LLM 单播必经路径,导致整个系统不可用
 - 一台设备的"使用者"是个外部信息(可记 `devices.alias` 文本字段),不必建模
-- 部门/角色挂在物理设备上即可满足广播,与"谁在用"解耦
+- 广播只保留部门维度,与"谁在用"解耦
 - 对应用户原话:"首先不需要持有人这个概念"
 
 ---
@@ -146,26 +146,26 @@
 | `users / user_roles / admin_roles` | 有 | **删** |
 | `holders` 相关 view/路由 | 有 | **删** |
 | `batches` | 无 | **新增**(`batch_uuid PK / alias / batch_secret / produced_at / produced_count / revoked / notes`) |
-| `devices` | UUID PK + alias + user_id + ... | PK 改 `device_id`(MAC),新增 `batch_uuid FK / dept / roles_json / enabled`;移除 `user_id` |
+| `devices` | UUID PK + alias + user_id + ... | PK 改 `device_id`(MAC),新增 `batch_uuid FK / dept / enabled`;移除 `user_id` |
 | `messages` | 主键 device_uuid | 主键 device_id |
 | `acks` | `{msg_id, device_uuid, ack_type, via}` | `{msg_id, device_id, kind, ts}`(删 via) |
 | `device_health_history`(可选) | 无 | 新增,时序,周期 30 s 一行;**只在控制台开启时启用** |
 | `telemetry` | 有 | **删**(被 behavior 替代) |
 | `behavior / behavior_decision / profile_7d` | 有 | 不变 |
 | `audit_log / scheduled_tasks / confirm_tokens` | 有 | 不变 |
-| `roles`(MCP guard) | 有 | 不变(操作员角色,与设备 roles 分离) |
+| `roles`(MCP guard) | 有 | 不变(操作员角色,与设备分组无关) |
 
-> `admins` 表(操作员账户)与 `roles`(MCP guard 权限格)保留;它们与设备无关。
+> `admins` 表(操作员账户)与 `roles`(MCP guard 权限格)保留;它们与设备分组无关。
 
 ---
 
 ## D-11:实施次序(优先级)
 
 1. ✅ 协议文档落地(本文 + `protocol-v1.md`)
-2. ⏳ 数据模型重写(`data-model-v1.md`,删表重建,无迁移)
-3. ⏳ 固件改:运行时 device_id + 新 topic + event/health 上行 + 移除 audio/hb/telemetry/shake
-4. ⏳ 服务器后端重写(新工程或大重构)
-5. ⏳ 前端重写(以设备为中心)
+2. ✅ 数据模型重写(`data-model-v1.md`,已在 `database.py` `SCHEMA` 实现,删表重建)
+3. ✅ 固件改:运行时 device_id + 新 topic + event/health 上行 + 移除 audio/hb/telemetry/shake(5 个 bug 已修复,代码在 `\\wsl.localhost\Ubuntu-22.04\esp-item\BeaconOps\`)
+4. ✅ 服务器后端重写(FastAPI 服务在 `Server/services/beacon/api/` 已上线)
+5. ⏳ 前端重写(以设备为中心,见 `frontend-v1.md`)
 6. ⏳ 切流量、删旧代码
 
 ---

@@ -43,14 +43,13 @@
 服务器(broker auth webhook 或同进程 auth 模块):
   1. SELECT * FROM batches WHERE batch_uuid=? AND revoked=0     —— 不通过 → 拒
   2. abs(server_now - ts) <= 300                                 —— 不通过 → 拒
-  3. nonce 在 Redis(或内存 LRU)未出现过(TTL 600 s)           —— 不通过 → 拒
+  3. nonce 在 SQLite `mqtt_nonces` 表中未出现过(expires_at = seen_at + 600 s)  —— 不通过 → 拒
   4. HMAC 校验通过                                               —— 不通过 → 拒
   5. UPSERT devices(device_id, batch_uuid, last_seen=now, ...)
   6. 返回 ACL:
        allow sub  device/{device_id}/cmd
        allow sub  broadcast/all/cmd
        allow sub  broadcast/dept/{device.dept}/cmd     (若已配置 dept)
-       allow sub  broadcast/role/{r}/cmd               (每个 role 一行)
        allow pub  device/{device_id}/uplink/+
        allow pub  device/{device_id}/status
        deny  其它
@@ -88,7 +87,6 @@
 | 下行 | `device/{id}/cmd` | 1 | false | 单条消息卡片 |
 | 下行 | `broadcast/all/cmd` | 1 | false | 全员广播 |
 | 下行 | `broadcast/dept/{dept}/cmd` | 1 | false | 部门广播 |
-| 下行 | `broadcast/role/{role}/cmd` | 1 | false | 角色广播 |
 | 上行 | `device/{id}/status` | 1 | **true** | 在线/离线(LWT)+ 固件版本 |
 | 上行 | `device/{id}/uplink/ack` | 1/2 | false | 4 类消息 ack |
 | 上行 | `device/{id}/uplink/event` | 1 | false | 端侧事件(parser 拒收/ack 放弃/丢消息) |
@@ -268,7 +266,6 @@ queued ──server publish──→ sent ──ack received──→ delivered 
 allow sub  device/{device_id}/cmd
 allow sub  broadcast/all/cmd
 allow sub  broadcast/dept/{dept}/cmd        (仅当 device.dept 非空)
-allow sub  broadcast/role/{role}/cmd        (device.roles 中每个 role 一行)
 allow pub  device/{device_id}/status
 allow pub  device/{device_id}/uplink/ack
 allow pub  device/{device_id}/uplink/event

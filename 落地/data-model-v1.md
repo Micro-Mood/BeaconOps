@@ -83,7 +83,6 @@ CREATE TABLE devices (
     batch_uuid       TEXT NOT NULL,              -- FK → batches.batch_uuid
     alias            TEXT NOT NULL DEFAULT '',   -- 自由备注(常写"谁在用")
     dept             TEXT NOT NULL DEFAULT '',   -- 单值,空字符串=未分配
-    roles_json       TEXT NOT NULL DEFAULT '[]', -- JSON 数组,如 ["medic","leader"]
     enabled          INTEGER NOT NULL DEFAULT 1, -- 单台禁用开关
 
     -- 来自 status (LWT)
@@ -115,8 +114,6 @@ CREATE INDEX idx_devices_online   ON devices(online);
 CREATE INDEX idx_devices_enabled  ON devices(enabled);
 ```
 
-> `roles_json` 用 JSON 字符串避免 N:M 中间表;查询时用 `json_each(roles_json)`(SQLite 内建 JSON1)。
-
 ### 1.3 `messages` — 消息主体(9 状态机)
 
 ```sql
@@ -124,8 +121,8 @@ CREATE TABLE messages (
     msg_id           TEXT PRIMARY KEY,           -- 32 hex (服务器生成)
 
     -- 目标(单播 / 广播二选一)
-    target_kind      TEXT NOT NULL,              -- 'device' | 'all' | 'dept' | 'role'
-    target_value     TEXT NOT NULL DEFAULT '',   -- device_id | '' | dept | role
+    target_kind      TEXT NOT NULL,              -- 'device' | 'all' | 'dept'
+    target_value     TEXT NOT NULL DEFAULT '',   -- device_id | '' | dept
                                                  --   广播展开时按这字段实时查 devices 表
 
     -- 内容(协议字段 §3.1)
@@ -165,8 +162,8 @@ CREATE INDEX idx_messages_next_retry ON messages(next_retry_at) WHERE status IN 
 
 **广播展开规则**:
 - `target_kind='all'`:发布到 `broadcast/all/cmd`,服务器在 publish 同时为**每个在线设备**创建一行 `message_recipients`(见 1.4)。
-- 同理 `dept` / `role`。
-- 单播 `target_kind='device'`:直接发 `device/{id}/cmd`,**不写** `message_recipients`(可选,看 §1.4 设计取舍)。
+- `target_kind='dept'`:发布到 `broadcast/dept/{dept}/cmd`,服务器在 publish 同时为该部门每个在线设备创建一行 `message_recipients`。
+- 单播 `target_kind='device'`:发 `device/{id}/cmd`,**同样写一行** `message_recipients`（不區分单播与广播，一律方便统一聚合观图）。
 
 ### 1.4 `message_recipients` — 广播展开后的逐设备追踪(可选但推荐)
 
@@ -315,15 +312,36 @@ CREATE INDEX idx_nonces_expires ON mqtt_nonces(expires_at);
 
 > 生产可改 Redis;落地 v1 用 SQLite 简化部署。后台 task 每分钟清 expired。
 
-### 1.12 `behavior` / `behavior_decision` / `profile_7d`
+### 1.12 `behavior` — 行为采样窗口(EC-BAID 算法源)
 
-保留**现状结构**,只把外键由 `device_uuid` 改为 `device_id`(命名统一)。本期不动算法。
+```sql
+CREATE TABLE behavior (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id       TEXT NOT NULL,
+    ts              INTEGER NOT NULL,        -- 窗口结束时刻 unix 秒
+    win_s           INTEGER NOT NULL DEFAULT 60,
+    static_s        INTEGER NOT NULL DEFAULT 0,
+    walk_slow_s     INTEGER NOT NULL DEFAULT 0,
+    walk_fast_s     INTEGER NOT NULL DEFAULT 0,
+    run_s           INTEGER NOT NULL DEFAULT 0,
+    shake_or_fall_s INTEGER NOT NULL DEFAULT 0,
+    shake_n         INTEGER NOT NULL DEFAULT 0,
+    intensity_avg   REAL    NOT NULL DEFAULT 0,
+    steps           INTEGER,                 -- 可缺
+    received_at     INTEGER NOT NULL,
+    UNIQUE(device_id, ts),
+    FOREIGN KEY (device_id) REFERENCES devices(device_id)
+);
+CREATE INDEX idx_behavior_dev_ts ON behavior(device_id, ts DESC);
+```
+
+> `behavior_decision` 和 `profile_7d` 本期未实现,预留设计位。
 
 ---
 
 ## 2. REST 接口清单
 
-> 全部前缀 `/api/v1`,认证除 `/auth/login` 和 `/auth/device` 外都要 admin session cookie 或 bearer。
+> 全部前缀 `/beacon/api/v1`,认证除 `/auth/login` 和 `/auth/device` 外都要 admin session cookie(名 `beacon_session`)或 Bearer token。
 
 ### 2.1 认证 / 设备接入
 
@@ -349,13 +367,12 @@ CREATE INDEX idx_nonces_expires ON mqtt_nonces(expires_at);
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET    | `/devices`                                   | 列表 + 筛选 `?batch=&dept=&role=&online=&q=`(alias 模糊) |
+| GET    | `/devices`                                   | 列表 + 筛选 `?batch=&dept=&online=&q=`(alias/device_id 模糊) |
 | GET    | `/devices/{device_id}`                       | 详情 |
-| PATCH  | `/devices/{device_id}`                       | 改 alias/dept/roles_json/enabled |
-| POST   | `/devices/{device_id}/disconnect`            | 主动踢下线(强制重连重读 ACL) |
+| PATCH  | `/devices/{device_id}`                       | 改 alias/dept/enabled |
 | GET    | `/devices/{device_id}/messages`              | 该设备消息历史 |
 | GET    | `/devices/{device_id}/events`                | 该设备 message_events 流水 |
-| GET    | `/devices/{device_id}/health/history`        | 健康时序(若开启) |
+| GET    | `/devices/{device_id}/health/history`        | 健康时序(若 HEALTH_HISTORY_ENABLED=true) |
 
 ### 2.4 消息
 
@@ -381,11 +398,11 @@ CREATE INDEX idx_nonces_expires ON mqtt_nonces(expires_at);
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST   | `/llm/chat`                       | 流式对话(SSE),返回 token + tool_call 事件 |
-| POST   | `/llm/confirm/{token}`            | 二次确认高危操作 |
-| GET    | `/llm/sessions`                   | 当前操作员的会话列表 |
+| POST   | `/llm/chat`                       | 对话接口(非流式,返回 JSON),内含 `reply / confirms / traces` |
+| POST   | `/llm/confirm/{token}`            | 二次确认高危操作(confirm_token 消耗后真正执行) |
 
 > MCP tools 子集:`list_devices / send_message / query_message / cancel_message`(无 `query_user`)。
+> 高危操作(紧急消息/广播)自动返回 `confirm_token`,必须后续调用 `POST /llm/confirm/{token}` 才会真正执行。
 
 ### 2.7 操作员
 
@@ -433,13 +450,15 @@ CREATE INDEX idx_nonces_expires ON mqtt_nonces(expires_at);
 
 ## 4. 实施清单
 
-- [ ] 删 `users / user_roles / holders / telemetry / tts_*` 旧表
-- [ ] 建上面 12 张表
-- [ ] `devices.uuid` → `device_id` 命名统一
-- [ ] `acks` 表合并入 `message_events`
-- [ ] 加 `messages.attempt_count / next_retry_at / last_error` 列
-- [ ] 加 `message_recipients` 表用于广播追踪
-- [ ] 改 `behavior.*` 表中 `device_uuid` 列为 `device_id`
+- [x] 删 `users / user_roles / holders / telemetry / tts_*` 旧表
+- [x] 建上面 12 张表
+- [x] `devices.uuid` → `device_id` 命名统一
+- [x] `acks` 表合并入 `message_events`
+- [x] 加 `messages.attempt_count / next_retry_at / last_error` 列
+- [x] 加 `message_recipients` 表用于广播追踪
+- [x] 改 `behavior.*` 表中 `device_uuid` 列为 `device_id`
+
+> 表结构已在 `Server/services/beacon/api/app/database.py` `SCHEMA` 常量中实现并上线,删表重建策略已实施。
 
 ---
 

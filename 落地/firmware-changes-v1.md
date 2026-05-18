@@ -1,6 +1,6 @@
 # BeaconOps 固件改造清单 v1
 
-> 状态:**待实施**
+> 状态:**已实施**(代码已在 `\\wsl.localhost\Ubuntu-22.04\esp-item\BeaconOps\`,5 个 bug 已修复)
 > 配套:[protocol-v1.md](./protocol-v1.md)、[data-model-v1.md](./data-model-v1.md)
 > 源码根目录(WSL):`/esp-item/BeaconOps/`
 > 访问路径(Win):`\\wsl.localhost\Ubuntu-22.04\esp-item\BeaconOps\`
@@ -9,16 +9,16 @@
 
 ## 0. 总体策略
 
-- **删除**:`components/audio/`(D-03)、所有 `audio_text` / `hb` 相关代码、固定 UUID/SECRET 烧录、SoftAP / Captive Portal 配网。
-- **新增**:`components/identity/`(MAC 读取 + 从 config.h 读 batch 凭证 + HMAC 计算)、`components/health/`(取代 hb,周期上报电量/RSSI/IP/队列深度)、`components/event/`(端事件上行)。
-- **改写**:`components/config/config.h`(去硬编码)、`components/net/mqtt.c`(改用 identity)、`components/msg/parser.c`(只支持新 schema)、`components/tx/tx.c`(失败后调用 event 上报 `ack_give_up`)、`main.cpp`(启动顺序 + 组件注入)。
-- **保留**:`profile/`、`sensor/`、`ui/`、`display/`、`fs/`、`backlight/`、`battery/`、`I2C/`、`certs/`、`error/`、`settings/`、`decode/`、`notify/`(仅提示音,与 TTS 无关)。
+- ✅ **删除**:`components/audio/` TTS 部分(D-03)、`hb` 相关代码、SoftAP/Captive Portal 配网。`DEVICE_UUID` 固定烧录改为运行时读 MAC。
+- ✅ **新增**:`components/identity/`(MAC 读取 + config.h batch 凭证 + HMAC 计算)、`components/health/`(取代 hb)、`components/event/`(端事件上行)。
+- ✅ **改写**:`components/config/config.h`、`components/net/mqtt.{h,c}`(移除 roles/role broadcast,BEFORE_CONNECT 刷新 HMAC)、`components/msg/{msg.c,parser.c}`(ack_mode 条件检查)、`components/tx/tx.c`、`main.cpp`(启动顺序 + 组件注入)。
+- ✅ **保留**:`profile/`、`sensor/`、`ui/`、`display/`、`fs/`、`backlight/`、`battery/`、`I2C/`、`certs/`、`error/`、`settings/`、`decode/`、`notify/`(仅提示音,与 TTS 无关)。
 
 ---
 
 ## 1. 文件级改动清单
 
-### 1.1 `components/config/config.h`
+### 1.1 ✅ `components/config/config.h`
 
 **删除**:
 ```c
@@ -71,7 +71,7 @@
 
 **保留**:管脚定义、I2C/I2S/LVGL/SPIFFS 全部不动。
 
-### 1.2 新建 `components/identity/`
+### 1.2 ✅ 新建 `components/identity/`
 
 ```
 components/identity/
@@ -86,7 +86,9 @@ components/identity/
 - `identity_build_password()`:生成 nonce → 读 `time(NULL)` → `HMAC_SHA256(BATCH_SECRET, device_id||"|"||ts||"|"||nonce)` → 输出 `"ts:nonce_hex:hmac_hex"`。
 - `username = BATCH_UUID`,`password = identity_build_password()`(服务器侧 split)。
 
-### 1.3 `components/net/mqtt.{h,c}`
+### 1.3 ✅ `components/net/mqtt.{h,c}`
+
+> bug C1/C2(删 `MQTT_TOPIC_BCAST_ROLE_FMT`、`dispatch_data` 删除 role 路由)、C3(删 `mqtt_config_t.roles` 字段)已修复。
 
 - 删除 `publish_hb` API。
 - 新增 `publish_event(payload)`、`publish_health(payload)`、`publish_status_online(payload)`。
@@ -94,7 +96,7 @@ components/identity/
 - `username/password` 不再来自宏,由 main.cpp 用 `identity_hmac_password()` 在 connect 前刷新(每次重连重算 nonce/ts)。
 - LWT payload 由 main 运行时构造:`{"online":false}` (retain=true);online payload `{"online":true,"fw":"BeaconOps-1.0","ts":<unix>}`。
 
-### 1.4 `components/msg/parser.{h,c}`
+### 1.4 ✅ `components/msg/parser.{h,c}`
 
 **删除**:
 - 嵌套 `display.title / display.body` 兼容分支
@@ -118,7 +120,7 @@ components/identity/
 - 删 `audio_text` / `has_audio` / `display` 嵌套(若存在)
 - 加 `ack_mode_e ack_mode`
 
-### 1.5 `components/tx/tx.{h,c}`
+### 1.5 ✅ `components/tx/tx.{h,c}`
 
 - 改 `tx_emit_ack` 上报内容:仅 `{msg_id, kind, ts}`(删除 via/device_id/type)
 - 重发达到 10 次失败时:
@@ -127,7 +129,7 @@ components/identity/
 - `tx_config_t` 增加 `event_publish_fn` + `event_user` 字段
 - `tx_ack_kind_e` 与下行 topic 一致:RECEIVED/DISPLAYED/ACKED/EXPIRED → 上报字段 `kind="received|displayed|acknowledged|expired"`
 
-### 1.6 新建 `components/event/`
+### 1.6 ✅ 新建 `components/event/`
 
 ```
 event.h:
@@ -146,7 +148,7 @@ event.h:
 - MQTT 未连接时,**短期 RAM 队列**(8 条)+ 连上后 flush;超出丢弃并 log
 - 不做 NVS 持久化(事件丢失可接受,不同于 ack)
 
-### 1.7 新建 `components/health/`
+### 1.7 ✅ 新建 `components/health/`
 
 ```
 health.h:
@@ -169,14 +171,16 @@ health.h:
 - 后台任务每 `period_s` 秒触发,或 battery_soc 变化 ≥3% / rssi 变化 ≥10dB 立即触发(去抖 5 s)
 - JSON 见 `protocol-v1.md` §3.5
 
-### 1.8 删除 `components/audio/`
+### 1.8 ✅ 删除 `components/audio/` TTS 部分
 
 - 整目录删
 - 从 `main/CMakeLists.txt REQUIRES` 删 `audio`
 - `notify/` 当前 include "audio.h" 来播提示音 — 这部分音频是**本地提示音**(蜂鸣序列),不是 TTS。保留 notify,但若 notify 依赖 audio.h 提供的 i2s 抽象,**保留 audio 组件但只暴露 i2s_write,删除 TTS / opus / http 流式相关代码**。
 - 实际操作:进入 `components/audio/audio.c` 删除 `audio_play_url` / `audio_tts_*` / opus decoder 调用,只留 `audio_init / audio_deinit / audio_session_acquire / audio_session_release / audio_write_pcm`。
 
-### 1.9 `main.cpp`
+### 1.9 ✅ `main.cpp`
+
+> bug C3(删 `qcfg.roles = nullptr`)已修复。
 
 启动顺序(SNTP 必须在 MQTT 之前):
 
@@ -201,7 +205,9 @@ health.h:
 - 硬编码的 `MQTT_ONLINE_PAYLOAD` 引用
 - SoftAP 配网 / Captive Portal 代码路径
 
-### 1.10 `components/msg/msg.{h,c}`
+### 1.10 ✅ `components/msg/msg.{h,c}`
+
+> bug C4(`msg_step_current` 先找 `cur_slot` 再检查 ack_mode≥DISPLAYED)、C5(`msg_step_shake` 检查 ack_mode≥ACKNOWLEDGED)已修复。
 
 - 新增 `ack_mode_e`(none/received/displayed/acknowledged)
 - 删 `audio_text` / `has_audio`
