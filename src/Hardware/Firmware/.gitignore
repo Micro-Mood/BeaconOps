@@ -1,0 +1,8 @@
+# ESP-IDF build output
+build/
+managed_components/
+merged-binary.bin
+sdkconfig.old
+
+# IDE
+.vscode/

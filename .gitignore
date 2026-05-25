@@ -1,0 +1,72 @@
+# ===== 系统 / 编辑器 =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== Python (Backend) =====
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 后端运行时数据：本地 SQLite、日志、上传文件等不进仓库
+src/Backend/data/
+src/Backend/*.db
+src/Backend/*.db-journal
+src/Backend/*.log
+src/Backend/.env
+src/Backend/.env.*
+!src/Backend/.env.example
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+dist-ssr/
+.cache/
+.parcel-cache/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 前端环境变量
+src/Frontend/.env
+src/Frontend/.env.*
+!src/Frontend/.env.example
+
+# ===== ESP-IDF / Firmware =====
+build/
+sdkconfig.old
+managed_components/
+dependencies.lock
+
+# 烧录产物
+src/Hardware/Firmware/main.bin
+src/Hardware/Scripts/fs.bin
+
+# ===== 嘉立创 / EDA =====
+*.bak
+*.lck
+# 不忽略 .epro 工程源文件
+# 自动导出物（Gerber / BOM / 坐标）请勿入库
+src/Hardware/PCB/Gerber/
+src/Hardware/PCB/BOM/
+src/Hardware/PCB/Pick*Place/
+
+# ===== 其他 =====
+*.tmp
+*.bak
+.scratch/
