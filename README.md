@@ -71,7 +71,7 @@ BeaconOps 是一套**自研硬件 + 后端 + Web 控制台**的小型 IoT 项目
 ### Web 控制台
 
 <p align="center">
-<img src="images/console-welcome.png" alt="Web 控制台" width="85%" /><br/>
+<img src="images/console-welcome.png" alt="Web 控制台" width="50%" /><br/>
 <sub>发送 / 历史 / 设备 / 批次 / 设置</sub>
 </p>
 
