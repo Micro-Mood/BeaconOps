@@ -6,7 +6,25 @@
 
 Message dispatch and device management console for Beacon terminals
 
-[中文 README](README.md) · [Open-source notes](#open-source-notes) · [License](LICENSE)
+<p>
+    <a href="README.md">中文 README</a> ·
+    <a href="#quick-start">Quick start</a> ·
+    <a href="#whats-in-docs">Docs index</a> ·
+    <a href="#open-source-notes">Open-source notes</a> ·
+    <a href="LICENSE">License</a>
+</p>
+
+<p>
+    <img alt="ESP-IDF" src="https://img.shields.io/badge/ESP--IDF-v5.x-1f6feb?style=flat-square" />
+    <img alt="LVGL" src="https://img.shields.io/badge/LVGL-9.3-26a641?style=flat-square" />
+    <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python%203.11-009688?style=flat-square" />
+    <img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-42b883?style=flat-square" />
+    <img alt="Software License" src="https://img.shields.io/badge/Software-AGPL--3.0--only-24292f?style=flat-square" />
+    <img alt="Hardware License" src="https://img.shields.io/badge/Hardware-CERN--OHL--S--2.0-1f6feb?style=flat-square" />
+    <img alt="Docs License" src="https://img.shields.io/badge/Docs-CC--BY--SA--4.0-8a63d2?style=flat-square" />
+</p>
+
+<strong>ESP32-C3 wearable terminal · MQTT TLS downlink messages · realtime web-console acknowledgements</strong>
 
 </div>
 
@@ -21,6 +39,15 @@ BeaconOps is a small IoT project built around **custom hardware + a backend + a 
 The device runs on an ESP32-C3 with LVGL 9.3 for the UI. The backend is a single FastAPI + SQLite + gmqtt process that speaks HTTP to the frontend and MQTT to devices. The frontend is a Vue 3 + Vite + TypeScript management panel.
 
 This setup is a good fit for **environments where phones are not allowed or practical**: schools that ban student phones on campus, cleanrooms and factory floors with no-phone policies, temporary groups in camps, research trips, or large-scale events where instructions need to go out to everyone at once. The device requires no SIM card, can't chat, can't install apps — it's a dedicated wearable receive-and-confirm terminal.
+
+<table>
+<tr>
+<td width="25%"><strong>End-to-end</strong><br/><sub>Hardware, firmware, backend, and frontend are all published together</sub></td>
+<td width="25%"><strong>Low-noise</strong><br/><sub>Receives instructions and confirmations; not a general chat device</sub></td>
+<td width="25%"><strong>Traceable</strong><br/><sub>ACK, event, health, and profile data can all be persisted</sub></td>
+<td width="25%"><strong>Reproducible</strong><br/><sub>PCB, enclosure, flashing scripts, and deployment docs are all in the repo</sub></td>
+</tr>
+</table>
 
 ---
 
@@ -79,14 +106,30 @@ So this isn't a product planned from scratch. It's more like **a few spare parts
 
 ## How it's structured
 
-```
-Device (ESP32-C3, LVGL)
-    │  MQTT (TLS)
-    ▼
-Backend (FastAPI + SQLite + gmqtt)
-    │  HTTP (JWT)
-    ▼
-Frontend console (Vue 3 + Vite)
+<table>
+<tr>
+<td align="center" width="33%">
+<strong>Device</strong><br/>
+<code>ESP32-C3</code> · <code>LVGL</code> · <code>FreeRTOS</code><br/>
+<sub>Shows messages, plays prompt tones, confirms by shake</sub>
+</td>
+<td align="center" width="33%">
+<strong>Backend</strong><br/>
+<code>FastAPI</code> · <code>SQLite</code> · <code>gmqtt</code><br/>
+<sub>Auth, dispatch, retry, audit, realtime streams</sub>
+</td>
+<td align="center" width="33%">
+<strong>Web console</strong><br/>
+<code>Vue 3</code> · <code>Vite</code> · <code>ECharts</code><br/>
+<sub>Send messages, inspect devices, manage batches, query logs</sub>
+</td>
+</tr>
+</table>
+
+```mermaid
+flowchart TD
+    Device["Device<br/>ESP32-C3 + LVGL"] -->|"MQTT TLS"| Backend["Backend<br/>FastAPI + SQLite + gmqtt"]
+    Backend -->|"HTTP + SSE + JWT"| Console["Web console<br/>Vue 3 + Vite"]
 ```
 
 | Module | Stack | Location |
@@ -101,6 +144,14 @@ Frontend console (Vue 3 + Vite)
 ---
 
 ## What's actually going on inside
+
+| Area | Implemented capabilities |
+|---|---|
+| Hardware | ESP32-C3 two-layer board, external SPI flash, IMU, fuel gauge, I2S amp, ST7789 display, Li-Po power path |
+| Firmware | LVGL UI, custom Chinese bitmap font, message levels, shake-to-ACK, NVS retry queue, health/profile uploads |
+| Protocol | MQTT TLS, HMAC-SHA256 dynamic password, nonce replay protection, strict uplink topic validation |
+| Backend | FastAPI management API, gmqtt bridge, SQLite state, Cookie + CSRF, SSE realtime streams |
+| Frontend | Vue console, behavior timeline chart, message history, batch management, admin and audit pages |
 
 ### PCB
 
@@ -161,6 +212,14 @@ The device detail page includes an ECharts behavior timeline chart showing the 6
 
 ## Repository structure
 
+<table>
+<tr>
+<td width="33%"><strong>docs/</strong><br/><sub>Design process, final specs, completion verification</sub></td>
+<td width="33%"><strong>images/</strong><br/><sub>README screenshots, PCB renders, device photos</sub></td>
+<td width="33%"><strong>src/</strong><br/><sub>Hardware, backend, frontend source, and module READMEs</sub></td>
+</tr>
+</table>
+
 ```
 BeaconOps/
 ├── docs/                Design documents and completion records
@@ -180,6 +239,8 @@ Each module has its own README (Chinese + English). Start from [src/README_EN.md
 ---
 
 ## What's in docs/
+
+> If you only want the final implemented behavior, start with `docs/Completed/`. `docs/Design Document/` is better for understanding the design process and trade-offs.
 
 ```
 docs/
@@ -210,10 +271,12 @@ Every claim in `Completed/` traces back to a specific source file in the repo �
 
 Pick the path that matches your interest:
 
-- **Just want to run the console and see the UI** → [src/Frontend/README.md](src/Frontend/README.md)
-- **Want a working backend — login, send messages** → [src/Backend/README.md](src/Backend/README.md)
-- **Want to build the firmware and flash your own board** → [src/Hardware/Firmware/README.md](src/Hardware/Firmware/README.md)
-- **Want the PCB / enclosure files to make a board** → [src/Hardware/README.md](src/Hardware/README.md)
+| What you want to do | Start here |
+|---|---|
+| Run the console and inspect the UI | [src/Frontend/README.md](src/Frontend/README.md) |
+| Bring up the backend, log in, and send messages | [src/Backend/README.md](src/Backend/README.md) |
+| Build the firmware and flash your own board | [src/Hardware/Firmware/README.md](src/Hardware/Firmware/README.md) |
+| Inspect the PCB / enclosure and make a board | [src/Hardware/README.md](src/Hardware/README.md) |
 
 The device ↔ backend interface contract (MQTT topics, HMAC auth, route prefixes) is all in [src/README_EN.md](src/README_EN.md) and doesn't depend on any specific server directory layout.
 
@@ -222,6 +285,8 @@ The device ↔ backend interface contract (MQTT topics, HMAC auth, route prefixe
 ---
 
 ## Don't want to self-host? Use my server
+
+> Credentials are not stored in the public repository. If you only want to try a board, contact me and I can create a separate operator account.
 
 If you just want to try the system with a physical board and don't want to set up a backend, configure a broker, or handle certificates — you can connect directly to the server I already have running.
 
@@ -240,10 +305,18 @@ Send a message saying you want to connect, include your board situation, and I'l
 
 ## Open-source notes
 
+<table>
+<tr>
+<td width="50%"><strong>Included</strong><br/>Source code, PCB project, enclosure models, screenshots, design documents, completion verification docs</td>
+<td width="50%"><strong>Not included</strong><br/>Real secrets, production credentials, admin password hashes, batch secrets</td>
+</tr>
+</table>
+
 - The repo contains **no** real JWT secrets, MQTT credentials, admin password hashes, or batch secrets — those are generated at deployment time
 - Broker addresses in documentation use the placeholder `YOUR_BROKER_HOST`
 - The PCB folder contains only the EasyEDA Pro source file `.epro`. Export Gerbers, BOM, and placement files yourself to avoid version mismatches
-- Upstream third-party code (e.g. `components/display/lv_v9.3/`, `components/display/lv_port/`) retains its original README and license and is not re-licensed under this repo's MIT
+- This repository uses split licensing: software code is AGPL-3.0-only, hardware design files are CERN-OHL-S-2.0, and documentation/media are CC BY-SA-4.0
+- Upstream third-party code (e.g. `components/display/lv_v9.3/`, `components/display/lv_port/`) retains its original README and license and is not re-licensed under this repository's split-license terms
 
 The PCB uses QFN-32, WSON-8, and LGA-14 fine-pitch packages with tight component spacing. The barrier to replicating this board is mainly in the soldering, not the files. Know your limits.
 
@@ -265,4 +338,10 @@ Demo videos, write-ups, and release notes will be posted here (placeholders for 
 
 ## License
 
-[MIT License](LICENSE) · © 2026 CoCandy
+| Scope | License |
+|---|---|
+| Firmware, backend, frontend, scripts, and other software source code | [AGPL-3.0-only](LICENSE) |
+| PCB, enclosure, and other hardware design files | [CERN-OHL-S-2.0](LICENSE) |
+| README files, docs, images, and other documentation/media | [CC BY-SA 4.0](LICENSE) |
+
+© 2026 CoCandy
