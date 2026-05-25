@@ -70,8 +70,8 @@ This setup is a good fit for **environments where phones are not allowed or prac
 
 ### Web console
 
-<p align="center">
-<img src="images/console-welcome.png" alt="Web console" width="85%" /><br/>
+<p>
+<img src="images/console-welcome.png" alt="Web console" width="40%" /><br/>
 <sub>Send / history / devices / batches / settings</sub>
 </p>
 
