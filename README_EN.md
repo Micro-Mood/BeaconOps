@@ -70,10 +70,22 @@ This setup is a good fit for **environments where phones are not allowed or prac
 
 ### Web console
 
-<p>
-<img src="images/console-welcome.png" alt="Web console" width="40%" /><br/>
-<sub>Send / history / devices / batches / settings</sub>
-</p>
+<table>
+<tr>
+<td align="center" width="33%">
+<img src="images/console-welcome.png" alt="Console home" width="100%" /><br/>
+<sub>Home · send / history / devices / batches / settings</sub>
+</td>
+<td align="center" width="33%">
+<img src="images/console-message.png" alt="Message detail" width="100%" /><br/>
+<sub>Message detail · level / status / ACK receipt</sub>
+</td>
+<td align="center" width="33%">
+<img src="images/console-device.png" alt="Device detail" width="100%" /><br/>
+<sub>Device detail · activity timeline / steps / intensity</sub>
+</td>
+</tr>
+</table>
 
 ### PCB
 
