@@ -4,13 +4,14 @@
 
 # BeaconOps
 
-Message dispatch and device management console for Beacon terminals
+Message delivery and device management for wearable Beacon terminals
 
 <p>
     <a href="README.md">中文 README</a> ·
-    <a href="#quick-start">Quick start</a> ·
+    <a href="#where-it-fits">Use cases</a> ·
+    <a href="#a-few-design-choices-worth-noting">Core design</a> ·
+    <a href="#getting-started">Getting started</a> ·
     <a href="#whats-in-docs">Docs index</a> ·
-    <a href="#open-source-notes">Open-source notes</a> ·
     <a href="LICENSE">License</a>
 </p>
 
@@ -24,30 +25,17 @@ Message dispatch and device management console for Beacon terminals
     <img alt="Docs License" src="https://img.shields.io/badge/Docs-CC--BY--SA--4.0-8a63d2?style=flat-square" />
 </p>
 
-<strong>ESP32-C3 wearable terminal · MQTT TLS downlink messages · realtime web-console acknowledgements</strong>
-
 </div>
 
 ---
 
 ## What is this
 
-BeaconOps is a small IoT project built around **custom hardware + a backend + a web console**, and it does one thing:
+BeaconOps is a complete small-scale IoT system consisting of custom hardware, firmware, a backend, and a web console — all open source.
 
-> Write a message in the console, hit Send — the wearable device rings and shows the message within a second. The recipient shakes the device to confirm receipt; the confirmation is sent back to the server, and the console updates the message status in real time.
+Core flow: write a message in the console and send it; the wearable device plays a chime and displays the message on screen; the recipient shakes the device to confirm, which sends an acknowledgement back to the server; the console sees the status update in real time. Every message has full state tracking from delivery to acknowledgement (or expiry).
 
-The device runs on an ESP32-C3 with LVGL 9.3 for the UI. The backend is a single FastAPI + SQLite + gmqtt process that speaks HTTP to the frontend and MQTT to devices. The frontend is a Vue 3 + Vite + TypeScript management panel.
-
-This setup is a good fit for **environments where phones are not allowed or practical**: schools that ban student phones on campus, cleanrooms and factory floors with no-phone policies, temporary groups in camps, research trips, or large-scale events where instructions need to go out to everyone at once. The device requires no SIM card, can't chat, can't install apps — it's a dedicated wearable receive-and-confirm terminal.
-
-<table>
-<tr>
-<td width="25%"><strong>End-to-end</strong><br/><sub>Hardware, firmware, backend, and frontend are all published together</sub></td>
-<td width="25%"><strong>Low-noise</strong><br/><sub>Receives instructions and confirmations; not a general chat device</sub></td>
-<td width="25%"><strong>Traceable</strong><br/><sub>ACK, event, health, and profile data can all be persisted</sub></td>
-<td width="25%"><strong>Reproducible</strong><br/><sub>PCB, enclosure, flashing scripts, and deployment docs are all in the repo</sub></td>
-</tr>
-</table>
+The device is based on the ESP32-C3 with a screen, speaker, gyroscope, and Li-Po battery. No SIM card required — Wi-Fi only.
 
 ---
 
@@ -59,30 +47,30 @@ This setup is a good fit for **environments where phones are not allowed or prac
 <tr>
 <td align="center" width="50%">
 <img src="images/device-home.jpg" alt="Device home screen" width="100%" /><br/>
-<sub>Home screen · time · step count · device ID</sub>
+<sub>Home screen · Time · Step count · Device ID</sub>
 </td>
 <td align="center" width="50%">
 <img src="images/device-message.jpg" alt="Device receiving a message" width="100%" /><br/>
-<sub>Incoming message · shake to confirm</sub>
+<sub>Incoming message · Shake to acknowledge</sub>
 </td>
 </tr>
 </table>
 
-### Web console
+### Web Console
 
 <table>
 <tr>
 <td align="center" width="33%">
 <img src="images/console-welcome.png" alt="Console home" width="100%" /><br/>
-<sub>Home · send / history / devices / batches / settings</sub>
+<sub>Home · Send / History / Devices / Batches / Settings</sub>
 </td>
 <td align="center" width="33%">
 <img src="images/console-message.png" alt="Message detail" width="100%" /><br/>
-<sub>Message detail · level / status / ACK receipt</sub>
+<sub>Message detail · Level / Status / ACK receipts</sub>
 </td>
 <td align="center" width="33%">
 <img src="images/console-device.png" alt="Device detail" width="100%" /><br/>
-<sub>Device detail · activity timeline / steps / intensity</sub>
+<sub>Device detail · Activity timeline / Steps / Intensity</sub>
 </td>
 </tr>
 </table>
@@ -92,62 +80,116 @@ This setup is a good fit for **environments where phones are not allowed or prac
 <table>
 <tr>
 <td align="center" width="33%">
-<img src="images/pcb-real.jpg" alt="Assembled board" width="100%" /><br/>
-<sub>Assembled board · ESP32-C3 + W25Q128</sub>
+<img src="images/pcb-real.jpg" alt="Physical board" width="100%" /><br/>
+<sub>Physical board · ESP32-C3 + W25Q128</sub>
 </td>
 <td align="center" width="33%">
 <img src="images/pcb-layout.png" alt="PCB routing" width="100%" /><br/>
-<sub>Routing · two-layer board</sub>
+<sub>Routing · Two-layer board</sub>
 </td>
 <td align="center" width="33%">
 <img src="images/pcb-render.png" alt="PCB 3D render" width="100%" /><br/>
-<sub>Back-side 3D render · USB-C / battery / speaker</sub>
+<sub>Back 3D render · USB-C / Battery / Speaker</sub>
 </td>
 </tr>
 </table>
 
 ---
 
-## Why this exists
+## Where it fits
 
-I was trying to figure out what to do for my graduation project. Rummaging around, I pulled a PCB I had designed the year before out of a drawer — already assembled, already debugged, with some drivers I had written the old-fashioned way. In the same drawer sat a 3D-printed enclosure left over from the [pocket](../pocket/) project (a friend had printed it for me). Board, enclosure, half-written drivers — might as well put them together and build something useful. That's how BeaconOps happened.
+This system makes sense when: **a group of people need to receive one-way instructions or notifications, need to confirm receipt, but cannot or should not use phones**.
 
-So this isn't a product planned from scratch. It's more like **a few spare parts + a weekend of wanting to use them** — though it actually took under ten days. It works; I wear it every day. The construction does have a "cobbled together" feel, which is fine — if you've ever had the urge to do something with leftover parts, the structure and implementation here should give you a decent starting point.
+Typical scenarios:
+
+- **Phone-banned school environments**: need to notify students or staff, but phones aren't allowed on site
+- **Factory floors / cleanrooms**: need to relay instructions to workers in areas where phones are prohibited
+- **Training camps / field trips / large events**: dispatch instructions to temporary sub-groups and verify each person actually saw the message
+- **Any situation where "sent" isn't enough**: you need an explicit acknowledgement, not just delivery
+
+The device cannot send messages, cannot run apps, and is not a chat device. That is a design constraint, not a limitation.
 
 ---
 
-## How it's structured
+## A few design choices worth noting
 
-<table>
-<tr>
-<td align="center" width="33%">
-<strong>Device</strong><br/>
-<code>ESP32-C3</code> · <code>LVGL</code> · <code>FreeRTOS</code><br/>
-<sub>Shows messages, plays prompt tones, confirms by shake</sub>
-</td>
-<td align="center" width="33%">
-<strong>Backend</strong><br/>
-<code>FastAPI</code> · <code>SQLite</code> · <code>gmqtt</code><br/>
-<sub>Auth, dispatch, retry, audit, realtime streams</sub>
-</td>
-<td align="center" width="33%">
-<strong>Web console</strong><br/>
-<code>Vue 3</code> · <code>Vite</code> · <code>ECharts</code><br/>
-<sub>Send messages, inspect devices, manage batches, query logs</sub>
-</td>
-</tr>
-</table>
+### Reliable message delivery
+
+A message follows a complete state chain from send to confirmation — it's not "fire and forget":
+
+1. **Console sends** → server records the message as `queued`, pushes it to the device via MQTT, status becomes `sent`
+2. **Device receives** → plays a chime, displays the message, sends a `delivered` ACK; sends another `displayed` ACK once the message is rendered on screen
+3. **Shake to confirm** → device sends `acknowledged` ACK, server status becomes `acknowledged`; if not confirmed within the timeout, status becomes `expired`
+4. **Status changes are visible in real time** → every state transition is pushed to the console via SSE, no page refresh needed
+
+ACK delivery itself is also reliable: after a shake, the ACK is first written to an NVS-backed persistent ring buffer, then delivered by a dedicated `tx` component using **exponential backoff** (base delay 2 s, cap 5 min, up to 10 retries). NVS lives in Flash — the pending queue survives a device reboot and delivery continues. If retries are exhausted, the ACK is not silently dropped; instead, an `ack_give_up` event is reported to the server so it knows exactly where the delivery chain broke.
+
+Server side: when a device comes back online, `on_device_online` immediately re-pushes any messages still in `queued` or `sent` state, without waiting for the next retry cycle.
+
+### Offline data is not lost
+
+Two data types use different persistence strategies:
+
+- **Pending ACK queue** → NVS (Flash), survives reboot
+- **Profile behavior windows** → SPIFFS (one file per 60-second window, up to 200 queued)
+
+Both drain automatically after reconnection without manual intervention. A brief disconnection or unexpected reboot drops nothing.
+
+### Health reporting and behavior reporting are separate
+
+`health` (operational snapshot) and `profile` (behavioral aggregation) are two independent uplink channels serving different consumers:
+
+**health**: every 30 seconds, plus threshold-triggered pushes (battery change ≥ 3% or RSSI change ≥ 10 dBm). Fields include battery level, charging state, RSSI, uptime, pending ACK count, and pending SPIFFS count — for ops staff to judge whether a device needs attention.
+
+**profile**: 60-second rolling windows, accumulating step count, time spent static / slow walk / fast walk / running, and activity intensity. Reported at the end of each window and displayed as an activity timeline on the device detail page in the console — for supervisors to view actual activity states.
+
+### Batch management and access authentication
+
+Devices in the same batch share a `batch_uuid` and `batch_secret`, flashed into firmware at the factory. Devices do not use static passwords to connect; instead they generate an HMAC-SHA256 dynamic password from `batch_secret` (format: `<ts>:<nonce>:<HMAC>`). The server validates the signature, checks nonce replay, and enforces a ±300 s clock skew tolerance. Devices without valid batch credentials cannot authenticate with the broker — unauthorized devices on the network cannot connect.
+
+Device IDs come from the chip's MAC eFuse, read at runtime. All devices in a batch flash the same firmware; no per-device unique firmware is needed.
+
+Batches also serve as management boundaries: `produced_count` is a hard cap on connected devices, not a soft statistic; revoking a batch triggers an async Mosquitto restart that actively disconnects all currently online devices in that batch without waiting for natural timeout; per-device disable and per-batch revocation are orthogonal operations that do not affect each other.
+
+### Native Chinese message display
+
+The firmware includes the MiSans font compiled in (a GB2312-subset bitmap, built directly into the firmware image). The display renders Chinese titles and body text without loading any font file at runtime. Message content is entered as plain text in the console; Chinese, English, and mixed text all display correctly.
+
+### Hardware: what fits in 36.28×19.39 mm
+
+The board is 36.28×19.39 mm. Everything below is on it simultaneously:
+
+| Function | Chip / Solution |
+|---|---|
+| MCU | ESP32-C3, QFN-32 |
+| Display driver | ST7789, 172×320 IPS, SPI |
+| Motion sensing | ST LSM6DS3TR-C, LGA-14 (all 14 pads on the bottom, invisible after assembly) |
+| Audio amplifier | MAX98357AEWL+, WLP-9 (1.34×1.34 mm, BGA-class package) |
+| Fuel gauge | CW2017, I2C |
+| External Flash | Winbond W25Q128JVPIQ |
+| Charge management | Dedicated charger IC + power path switching IC |
+| Power | DCDC 3.3 V, USB ESD protection |
+
+The firmware partition layout is designed for 4 MB Flash. If you are making your own PCB, you can use the ESP32-C3 FH4 (built-in 4 MB Flash) and remove the external W25Q128, eliminating one component.
+
+The ESP32-C3 has 13 usable GPIOs on this board (GPIO 11–17 are occupied by internal Flash; GPIO 18–19 are USB D±). All 13 are assigned: 3 for I2S audio, 2 for shared I2C bus, 4 for SPI display, 1 for backlight PWM, 2 for charging state detection, 1 for other control. None remain.
+
+Power path switching is handled entirely in hardware. When USB-C is present, USB power takes priority; disconnecting it switches automatically to battery. The device operates normally while charging. The firmware only reads charging state and does not control the power path.
+
+---
+
+## How it's built
 
 ```mermaid
 flowchart TD
-    Device["Device<br/>ESP32-C3 + LVGL"] -->|"MQTT TLS"| Backend["Backend<br/>FastAPI + SQLite + gmqtt"]
-    Backend -->|"HTTP + SSE + JWT"| Console["Web console<br/>Vue 3 + Vite"]
+    Device["Device\nESP32-C3 + LVGL"] -->|"MQTT TLS"| Backend["Backend\nFastAPI + SQLite + gmqtt"]
+    Backend -->|"HTTP + SSE + JWT"| Console["Web Console\nVue 3 + Vite"]
 ```
 
 | Module | Stack | Location |
 |---|---|---|
 | Firmware | ESP-IDF v5.x · ESP32-C3 · LVGL 9.3 · FreeRTOS | [src/Hardware/Firmware/](src/Hardware/Firmware/) |
-| PCB | EasyEDA Pro (two-layer, main ICs: QFN-32 / WSON-8 / LGA-14) | [src/Hardware/PCB/](src/Hardware/PCB/) |
+| PCB | EasyEDA Pro (two-layer, QFN-32 / WSON-8 / LGA-14) | [src/Hardware/PCB/](src/Hardware/PCB/) |
 | Enclosure | STL + 3DM (reused from [pocket](../pocket/hardware/)) | [src/Hardware/Enclosure/](src/Hardware/Enclosure/) |
 | Flash scripts | Windows bat + spiffsgen | [src/Hardware/Scripts/](src/Hardware/Scripts/) |
 | Backend | Python 3.11 · FastAPI · aiosqlite · gmqtt · PyJWT · bcrypt | [src/Backend/](src/Backend/) |
@@ -155,163 +197,91 @@ flowchart TD
 
 ---
 
-## What's actually going on inside
+## Why this exists
 
-| Area | Implemented capabilities |
-|---|---|
-| Hardware | ESP32-C3 two-layer board, external SPI flash, IMU, fuel gauge, I2S amp, ST7789 display, Li-Po power path |
-| Firmware | LVGL UI, custom Chinese bitmap font, message levels, shake-to-ACK, NVS retry queue, health/profile uploads |
-| Protocol | MQTT TLS, HMAC-SHA256 dynamic password, nonce replay protection, strict uplink topic validation |
-| Backend | FastAPI management API, gmqtt bridge, SQLite state, Cookie + CSRF, SSE realtime streams |
-| Frontend | Vue console, behavior timeline chart, message history, batch management, admin and audit pages |
+I was thinking about what to do for my thesis project. I pulled an old PCB out of a drawer — soldered, tested, and partially written firmware from the year before. Next to it was a 3D-printed enclosure left over from the [pocket](../pocket/) project. Board ready, enclosure ready, half the drivers written — might as well put them together into something useful. That's how BeaconOps started.
 
-### PCB
-
-The board is a two-layer design drawn in EasyEDA Pro. The main chip is an ESP32-C3 (QFN-32), with a Winbond W25Q128JV for external SPI flash in a WSON-8 package.
-
-Those are manageable. The two tricky ones are the leadless parts:
-
-- The ST LSM6DS3TR-C IMU is LGA-14: all 14 pads are hidden under the chip body. You can't see the solder joints after reflow — positional accuracy from a pick-and-place or hot-air station is what keeps the connections reliable. A 0.1 mm shift can produce a cold joint.
-- The MAX98357AEWL+ audio amp is WLP-9 (1.34 × 1.34 mm): a bare die with 9 solder balls — effectively a BGA-class package. Rework requires X-Ray; in a hand-soldering context a bad joint usually means replacing the part.
-
-Passive components are all 0402; the tightest pad spacing is around 0.4 mm. Hand-soldering basically requires a hot-air station with flux, and it's normal to lose a board on the first attempt without prior experience.
-
-The power circuit is more than just plugging in USB: USB-C and the Li-Po battery need dual-path switching, the battery needs a dedicated charge management IC, the whole board runs through a DC-DC converter to 3.3 V, and the USB D+/D- lines need ESD protection. The RF section uses an IPEX U.FL connector so you can swap in an external antenna when the environment demands it.
-
-### Firmware
-
-ESP-IDF v5.x + FreeRTOS + LVGL 9.3, written in a mix of C and C++. Flash is partitioned across 4 MB: `nvs` 24 KB, `phy_init` 4 KB, `factory` 2.87 MB, SPIFFS 1 MB. The current app image is around 2.4 MB, leaving roughly 470 KB of headroom before hitting the `factory` partition ceiling — worth checking before adding features.
-
-Boot logic lives in `main/main.cpp`: GPIO, I²C, IMU, LVGL, backlight, NVS, SPIFFS, audio, and CW2017 are all initialized synchronously in order. Then `net_bringup_task` runs asynchronously: Wi-Fi, SNTP time sync, HMAC identity construction, MQTT connection, and up/downlink channel registration. Finally, `sensor_task` runs as its own FreeRTOS task handling IMU behavior events, isolated from the network task.
-
-All peripheral drivers in `components/` — ST7789, LSM6DS3TR-C, CW2017, MAX98357 I²S, PWM backlight, NVS+SPIFFS, MQTT TLS — are written from scratch, not copied from vendor demos.
-
-The firmware UI uses a custom MiSans Bold bitmap font. A Python script extracts glyphs from the font file against the GB2312 character set and outputs a `.c` file that gets compiled directly into the firmware — no TrueType runtime, no font file on Flash. Updating the font means re-running the script.
-
-Messages have four levels: `info`, `notice`, `warn`, and `emergency`. At parse time, `warn` and `emergency` are force-set to "requires acknowledgement" — the device considers them unconfirmed until the user shakes it. The shake callback chain is: `sensor_task` detects the gesture → `msg_on_shake` → ACK published. ACKs are written to an NVS ring buffer and retried with exponential backoff. If retries are exhausted, the result is escalated as an `ack_give_up` event uploaded to the server.
-
-The `health` component sends a heartbeat every 30 seconds by default, plus a threshold-triggered extra packet when battery level or charging state changes — no waiting for the next cycle. `profile` 60-second behavior windows that accumulate while offline are written to SPIFFS and uploaded after reconnection; nothing is silently dropped.
-
-### Device ↔ backend protocol
-
-Transport: MQTT 3.1.1 over TLS 1.2, broker on port `8883`, CA = Let's Encrypt ISRG Root X1. The PEM is compiled into the firmware directly — no system trust store, no separate config step.
-
-Authentication uses per-batch HMAC rather than a static password. The backend issues a `batch_secret` when a batch is created. At connection time the device uses its 12-hex-digit MAC as `username` and constructs `password` as `<ts>:<nonce>:<HMAC_SHA256(batch_secret, device_id|ts|nonce)>`. The server tolerates a ±300 s clock skew and stores `nonce` values to prevent replay. Batch keys can be rotated or revoked independently without affecting other batches.
-
-Topic structure:
-- Downlink (server → device): `device/{id}/cmd`, `broadcast/all/cmd`, `broadcast/dept/{dept}/cmd`
-- Uplink (device → server): `device/{id}/uplink/{ack|event|health|profile}`, `device/{id}/status`
-
-The server validates incoming topics against `^device/([0-9a-f]{12})/(status|uplink/...)$` to block impersonation. QoS: `ack`/`event`/`profile`/`status` use QoS 1; `health` heartbeats use QoS 0.
-
-### Backend
-
-Python 3.11 with FastAPI + aiosqlite + gmqtt + PyJWT + bcrypt. A single process handles two surfaces simultaneously: HTTP for the frontend (JWT auth) and MQTT for devices (gmqtt bridging to Mosquitto). Both surfaces share the same SQLite state in memory — no separate message bus needed.
-
-Routes are split by resource: `auth` / `admins` / `audit` / `batches` / `devices` / `messages` / `stream` (SSE). Three roles — `admin` / `operator` / `viewer` — are enforced via FastAPI `Depends` at each endpoint. The management portal login uses Cookie + CSRF double protection (`csrf_guard` middleware).
-
-Downlink retries don't block the publish path: `messages.py` runs a `retry_loop` that fires deliveries when `next_retry_at` is due. When a device reconnects, `on_device_online` immediately re-pushes all messages still in `queued` or `sent` state — no waiting for the next retry window.
-
-When a batch is revoked, the backend asynchronously restarts the Mosquitto broker, actively disconnecting currently-online devices rather than waiting for them to detect the revocation themselves. Persistence is a single-file SQLite; expired nonces and tokens are cleaned up every 10 minutes.
-
-### Frontend
-
-Vue 3.5 + Vite 6 + TypeScript 5 + Pinia + Element Plus + ECharts, 12 views: login, home, message list, message detail, send, device list, device detail, batch list, batch detail, settings (with sub-pages).
-
-The device detail page includes an ECharts behavior timeline chart showing the 60-second windowed activity data uploaded from the device (step count, activity intensity, online/offline events). The audit page supports filtering by actor, action type, and time range. Admin management supports full CRUD. Real-time data comes through SSE (backend `/stream` route) — message status changes, device health, and device behavior all push through there, no polling.
+This is not a product designed from scratch. It's a small project assembled from spare parts, built in under ten days. If you have a board sitting around and want to put it to use, feel free to reference the structure and implementation here.
 
 ---
 
 ## Repository structure
 
-<table>
-<tr>
-<td width="33%"><strong>docs/</strong><br/><sub>Design process, final specs, completion verification</sub></td>
-<td width="33%"><strong>images/</strong><br/><sub>README screenshots, PCB renders, device photos</sub></td>
-<td width="33%"><strong>src/</strong><br/><sub>Hardware, backend, frontend source, and module READMEs</sub></td>
-</tr>
-</table>
-
 ```
 BeaconOps/
 ├── docs/                Design documents and completion records
-├── images/              Screenshots and renders used in READMEs
+├── images/              README screenshots and renders
 ├── src/
-│   ├── Hardware/        PCB / enclosure / firmware / flash scripts
+│   ├── Hardware/        PCB / Enclosure / Firmware / Flash scripts
 │   ├── Backend/         FastAPI + MQTT bridge
 │   ├── Frontend/        Vue console
 │   ├── README.md        src overview (Chinese)
 │   └── README_EN.md     src overview (English)
 ├── LICENSE
-└── README.md            This file (Chinese)
+└── README.md            This file
 ```
 
-Each module has its own README (Chinese + English). Start from [src/README_EN.md](src/README_EN.md) for a guided tour.
+Each module has its own README (Chinese and English). Start from [src/README.md](src/README.md) for an overview.
 
 ---
 
 ## What's in docs/
 
-> If you only want the final implemented behavior, start with `docs/Completed/`. `docs/Design Document/` is better for understanding the design process and trade-offs.
+> For the final implementation, refer to `docs/Completed/`. `docs/Design Document/` is better for understanding design decisions and trade-offs.
 
 ```
 docs/
-├── Design Document/     Design-phase documents
-│   ├── 草稿/            Early flow sketches and drafts
-│   └── 落地/            Final technical specs
-│       ├── data-model-v1.md       Data model and database schema
-│       ├── decisions.md           Key design decisions log
-│       ├── firmware-changes-v1.md Firmware refactor targets and file-level changes
-│       ├── frontend-v1.md         Frontend page and state management spec
-│       └── protocol-v1.md         Protocol fields, topic structure, identity model
-└── Completed/           Post-completion verification documents (evidence-based)
-    ├── 00-完工总览.md              Overall completion summary and system boundaries
-    ├── 01-硬件与固件完工说明.md    Hardware init, pin mapping, firmware capabilities
-    ├── 02-服务器完工说明.md        Backend routes, auth, data layer verification
-    ├── 03-前端完工说明.md          Console pages and real-time channel verification
-    ├── 04-协议与数据模型完工说明.md Protocol fields and database table verification
-    ├── 05-功能证据索引.md          Each feature mapped to a reviewable source file
-    ├── 06-系统完整功能总结.md      Full capability summary of the live system
-    └── 07-系统适用场景分析.md      Who and what this system is suited for
+├── Design Document/
+│   └── 落地/            Finalized technical specs
+│       ├── data-model-v1.md        Data model and DB schema
+│       ├── decisions.md            Key design decision records
+│       ├── firmware-changes-v1.md  Firmware modification targets
+│       ├── frontend-v1.md          Frontend pages and state management spec
+│       └── protocol-v1.md          Protocol fields, topic structure, identity model
+└── Completed/           Post-completion verification docs (based on actual implementation)
+    ├── 00-完工总览.md
+    ├── 01-硬件与固件完工说明.md
+    ├── 02-服务器完工说明.md
+    ├── 03-前端完工说明.md
+    ├── 04-协议与数据模型完工说明.md
+    ├── 05-功能证据索引.md
+    ├── 06-系统完整功能总结.md
+    └── 07-系统适用场景分析.md
 ```
 
-Every claim in `Completed/` traces back to a specific source file in the repo — the rule when writing these was "no evidence, don't write it." They're more reliable as a technical reference than the draft documents.
+Every conclusion in `Completed/` maps to a specific file in the repository — the rule when writing them was "no file evidence, don't include it." More reliable as technical reference than the drafts.
 
 ---
 
-## Quick start
+## Getting started
 
-Pick the path that matches your interest:
+Pick a path based on what you want to do:
 
-| What you want to do | Start here |
+| What you want | Where to start |
 |---|---|
-| Run the console and inspect the UI | [src/Frontend/README.md](src/Frontend/README.md) |
-| Bring up the backend, log in, and send messages | [src/Backend/README.md](src/Backend/README.md) |
-| Build the firmware and flash your own board | [src/Hardware/Firmware/README.md](src/Hardware/Firmware/README.md) |
-| Inspect the PCB / enclosure and make a board | [src/Hardware/README.md](src/Hardware/README.md) |
+| Just run the console UI | [src/Frontend/README.md](src/Frontend/README.md) |
+| Run the backend, log in, send messages | [src/Backend/README.md](src/Backend/README.md) |
+| Build firmware and flash your own board | [src/Hardware/Firmware/README.md](src/Hardware/Firmware/README.md) |
+| Look at PCB / enclosure, print your own | [src/Hardware/README.md](src/Hardware/README.md) |
 
-The device ↔ backend interface contract (MQTT topics, HMAC auth, route prefixes) is all in [src/README_EN.md](src/README_EN.md) and doesn't depend on any specific server directory layout.
+Device ↔ backend interface contracts (MQTT topics, HMAC auth format, route prefixes) are documented in [src/README.md](src/README.md).
 
-> ⚠️ **Before replicating the PCB**: QFN + LGA + WLP components are packed close together. Without a hot-air station and some hand-soldering experience, expect to scrap a board on the first attempt. Work through the software side first (enclosure, firmware, backend, frontend) and decide later whether the PCB is worth tackling.
+> ⚠️ **Before replicating this board**: LGA-14 and WLP-9 are leadless packages. Without reflow equipment and experience, strongly recommend getting familiar with the software side first before committing to PCB assembly.
 
 ---
 
 ## Don't want to self-host? Use my server
 
-> Credentials are not stored in the public repository. If you only want to try a board, contact me and I can create a separate operator account.
-
-If you just want to try the system with a physical board and don't want to set up a backend, configure a broker, or handle certificates — you can connect directly to the server I already have running.
+If you just want to connect a board and try it out without setting up your own backend, broker, and certificates, you can connect to my running instance.
 
 What you get:
-- An **operator**-level console account (send messages, manage batches, rotate secrets, update device aliases; no admin account management, no audit log access)
-- Server hostname, MQTT broker address, and the ISRG Root X1 PEM
-- A few config steps to put your `BROKER_URI` and batch secret into the firmware and you're online
+- An **operator-level** console account (send messages, manage batches, rotate secrets, rename devices; no access to audit logs or admin management)
+- Server hostname, MQTT broker address, ISRG Root X1 PEM
+- Fill in `BROKER_URI` in the firmware and your batch secret, reflash, and you're live
 
-Contact (credentials aren't in the public repo):
-- 📧 Email: `tp081215@outlook.com`
+Contact (credentials are not in the public repo):
+- 📧 `tp081215@outlook.com`
 - 💬 QQ group: `1042593321`
-
-Send a message saying you want to connect, include your board situation, and I'll send over the account, broker address, and certificate.
 
 ---
 
@@ -319,24 +289,19 @@ Send a message saying you want to connect, include your board situation, and I'l
 
 <table>
 <tr>
-<td width="50%"><strong>Included</strong><br/>Source code, PCB project, enclosure models, screenshots, design documents, completion verification docs</td>
-<td width="50%"><strong>Not included</strong><br/>Real secrets, production credentials, admin password hashes, batch secrets</td>
+<td width="50%"><strong>What's in the repo</strong><br/>Source code, PCB project, enclosure models, screenshots, design docs, completion verification docs</td>
+<td width="50%"><strong>What's not in the repo</strong><br/>Real keys, production credentials, admin password hashes, batch secrets</td>
 </tr>
 </table>
 
-- The repo contains **no** real JWT secrets, MQTT credentials, admin password hashes, or batch secrets — those are generated at deployment time
-- Broker addresses in documentation use the placeholder `YOUR_BROKER_HOST`
-- The PCB folder contains only the EasyEDA Pro source file `.epro`. Export Gerbers, BOM, and placement files yourself to avoid version mismatches
-- This repository uses split licensing: software code is AGPL-3.0-only, hardware design files are CERN-OHL-S-2.0, and documentation/media are CC BY-SA-4.0
-- Upstream third-party code (e.g. `components/display/lv_v9.3/`, `components/display/lv_port/`) retains its original README and license and is not re-licensed under this repository's split-license terms
-
-The PCB uses QFN-32, WSON-8, and LGA-14 fine-pitch packages with tight component spacing. The barrier to replicating this board is mainly in the soldering, not the files. Know your limits.
+- Broker addresses in all docs are written as the placeholder `YOUR_BROKER_HOST`
+- PCB contains only the EasyEDA Pro source file `.epro`; export Gerber / BOM / pick-and-place yourself to avoid version mismatch
+- This repo uses layered licensing: software code under AGPL-3.0-only, hardware design under CERN-OHL-S-2.0, docs and media under CC BY-SA 4.0
+- Upstream third-party code (`components/display/lv_v9.3/`, `components/display/lv_port/`) retains its original license and is not subject to this repo's layered licensing
 
 ---
 
 ## Links
-
-Demo videos, write-ups, and release notes will be posted here (placeholders for now):
 
 | Platform | Link |
 |---|---|
@@ -344,7 +309,7 @@ Demo videos, write-ups, and release notes will be posted here (placeholders for 
 | Bilibili | _TBD_ |
 | YouTube | _TBD_ |
 | X / Twitter | _TBD_ |
-| Open Source Plaza | _TBD_ |
+| OSHWHub | [oshwhub.com/httppp/project_owrzrbgf](https://oshwhub.com/httppp/project_owrzrbgf) |
 
 ---
 
@@ -352,8 +317,8 @@ Demo videos, write-ups, and release notes will be posted here (placeholders for 
 
 | Scope | License |
 |---|---|
-| Firmware, backend, frontend, scripts, and other software source code | [AGPL-3.0-only](LICENSE) |
-| PCB, enclosure, and other hardware design files | [CERN-OHL-S-2.0](LICENSE) |
-| README files, docs, images, and other documentation/media | [CC BY-SA 4.0](LICENSE) |
+| Firmware, backend, frontend, scripts | [AGPL-3.0-only](LICENSE) |
+| PCB, enclosure and other hardware design files | [CERN-OHL-S-2.0](LICENSE) |
+| README, docs, images and other documentation | [CC BY-SA 4.0](LICENSE) |
 
 © 2026 CoCandy
