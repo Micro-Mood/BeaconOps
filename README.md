@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="images/logo.png" alt="BeaconOps" width="160" />
+<img src="images/cover.png" alt="BeaconOps" width="720" />
 
-# BeaconOps
-
-面向随身 Beacon 终端的消息下发与设备管理系统
+## 面向随身 Beacon 终端的消息下发与设备管理系统
 
 <p>
     <a href="README_EN.md">English README</a> ·
