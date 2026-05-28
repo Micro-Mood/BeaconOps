@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="images/logo.png" alt="BeaconOps" width="160" />
+<img src="images/cover.png" alt="BeaconOps" width="720" />
 
-# BeaconOps
-
-Message delivery and device management for wearable Beacon terminals
+## Message delivery and device management for wearable Beacon terminals
 
 <p>
     <a href="README.md">中文 README</a> ·
@@ -108,6 +106,8 @@ Typical scenarios:
 - **Any situation where "sent" isn't enough**: you need an explicit acknowledgement, not just delivery
 
 The device cannot send messages, cannot run apps, and is not a chat device. That is a design constraint, not a limitation.
+
+> For a more detailed scenario analysis, see [docs/Completed/07-系统适用场景分析.md](docs/Completed/07-系统适用场景分析.md) (Chinese)
 
 ---
 
@@ -306,7 +306,7 @@ Contact (credentials are not in the public repo):
 | Platform | Link |
 |---|---|
 | QQ group | `1042593321` |
-| Bilibili | _TBD_ |
+| Bilibili | [【开源】BeaconOps & 一股强劲的音乐袭来](https://b23.tv/ga6vSr7) |
 | YouTube | _TBD_ |
 | X / Twitter | _TBD_ |
 | OSHWHub | [oshwhub.com/httppp/project_owrzrbgf](https://oshwhub.com/httppp/project_owrzrbgf) |
