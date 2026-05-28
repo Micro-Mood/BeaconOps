@@ -287,17 +287,9 @@ Contact (credentials are not in the public repo):
 
 ## Open-source notes
 
-<table>
-<tr>
-<td width="50%"><strong>What's in the repo</strong><br/>Source code, PCB project, enclosure models, screenshots, design docs, completion verification docs</td>
-<td width="50%"><strong>What's not in the repo</strong><br/>Real keys, production credentials, admin password hashes, batch secrets</td>
-</tr>
-</table>
+This repo uses layered licensing: software code under AGPL-3.0-only, hardware design under CERN-OHL-S-2.0, docs and media under CC BY-SA 4.0. Upstream third-party code (`components/display/lv_v9.3/`, `components/display/lv_port/`) retains its original license and is not subject to this repo's layered licensing.
 
-- Broker addresses in all docs are written as the placeholder `YOUR_BROKER_HOST`
-- PCB contains only the EasyEDA Pro source file `.epro`; export Gerber / BOM / pick-and-place yourself to avoid version mismatch
-- This repo uses layered licensing: software code under AGPL-3.0-only, hardware design under CERN-OHL-S-2.0, docs and media under CC BY-SA 4.0
-- Upstream third-party code (`components/display/lv_v9.3/`, `components/display/lv_port/`) retains its original license and is not subject to this repo's layered licensing
+PCB contains only the EasyEDA Pro source file `.epro`; export Gerber / BOM / pick-and-place yourself to avoid version mismatch. Broker addresses in all docs are written as the placeholder `YOUR_BROKER_HOST`; real credentials are not in the public repo.
 
 ---
 

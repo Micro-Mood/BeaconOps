@@ -287,17 +287,9 @@ docs/
 
 ## 开源说明
 
-<table>
-<tr>
-<td width="50%"><strong>仓库里有</strong><br/>源码、PCB 工程、外壳模型、截图、设计文档、完工核实文档</td>
-<td width="50%"><strong>仓库里没有</strong><br/>真实密钥、生产凭证、管理员密码哈希、批次 secret</td>
-</tr>
-</table>
+本仓库采用分层授权：软件代码 AGPL-3.0-only，硬件设计 CERN-OHL-S-2.0，文档与图片 CC BY-SA 4.0。上游第三方代码（`components/display/lv_v9.3/`、`components/display/lv_port/`）保留各自原始许可，不受本仓库分层授权约束。
 
-- 文档里的 broker 地址统一写成占位符 `YOUR_BROKER_HOST`，不暴露服务器
-- PCB 只放工程源文件 `.epro`，Gerber / BOM / 坐标文件请在嘉立创专业版里自行导出，避免版本对不上
-- 本仓库采用分层授权：软件代码 AGPL-3.0-only，硬件设计 CERN-OHL-S-2.0，文档与图片 CC BY-SA-4.0
-- 上游第三方代码（`components/display/lv_v9.3/`、`components/display/lv_port/`）保留各自原始许可，不受本仓库分层授权约束
+PCB 只放工程源文件 `.epro`，Gerber / BOM / 坐标文件请在嘉立创专业版里自行导出，避免版本对不上。文档里的 broker 地址统一写成占位符 `YOUR_BROKER_HOST`，真实凭证不放公开仓库。
 
 ---
 
